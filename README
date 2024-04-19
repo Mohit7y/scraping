@@ -1,0 +1,53 @@
+import requests
+from bs4 import BeautifulSoup
+import csv
+
+def scrape_yellow_pages(base_url):
+    page_num = 1
+    all_businesses = []
+
+    while True:
+        url = f"{base_url}/page/{page_num}"
+        response = requests.get(url)
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        businesses = soup.find_all('div', class_='company-info')
+        if not businesses:
+            break
+
+        for business in businesses:
+            name = business.find('h4').text.strip()
+            location = business.find('div', class_='location').text.strip()
+            city = business.find('div', class_='city').text.strip()
+            po_box = business.find('div', class_='pobox').text.strip()
+            phone = business.find('div', class_='phone').text.strip()
+            mobile = business.find('div', class_='mobile').text.strip()
+            company_page_link = business.find('a')['href']
+            logo_url = business.find('img')['src']
+
+            all_businesses.append({
+                'Name': name,
+                'Location': location,
+                'City': city,
+                'P.O. Box': po_box,
+                'Phone': phone,
+                'Mobile': mobile,
+                'Company Page Link': company_page_link,
+                'Logo URL': logo_url
+            })
+
+        page_num += 1
+
+    return all_businesses
+
+def save_to_csv(data, filename):
+    with open(filename, 'w', newline='', encoding='utf-8') as file:
+        writer = csv.DictWriter(file, fieldnames=data[0].keys())
+        writer.writeheader()
+        for row in data:
+            writer.writerow(row)
+
+if __name__ == "__main__":
+    base_url = 'https://www.yellowpages-uae.com/uae/restaurant'
+    businesses_data = scrape_yellow_pages(base_url)
+    save_to_csv(businesses_data, 'yellow_pages_businesses.csv')
